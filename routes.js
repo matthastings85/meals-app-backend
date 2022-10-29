@@ -15,6 +15,7 @@ const {
   createAndSaveList,
   findListById,
   updateList,
+  removeMealPlanById,
 } = require("./database");
 
 // Authorization middleware. When used, the Access Token must
@@ -180,6 +181,26 @@ router.get("/getmealplan/get/:id", async (req, res) => {
     }
   });
 });
+
+// Delete Meal Plan
+
+router.delete("/deletemealplan/delete/:id&:userId", async (req, res) => {
+  console.log("param: ", req.params);
+  const mealPlanId = req.params.id;
+  const userId = req.params.userId;
+  await removeMealPlanById(mealPlanId, userId, (err, data) => {
+    console.log(data);
+    if (err) {
+      return res.json({ error: true, message: "failed to get mealPlan info" });
+    } else {
+      return res
+        .status(200)
+        .json({ error: false, message: "meal plan succesfully deleted", data });
+    }
+  });
+});
+
+// Archive Meal Plan
 
 // New List
 router.post("/newlist/post", async (req, res) => {
