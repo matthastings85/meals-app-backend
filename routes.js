@@ -69,20 +69,10 @@ router.get("/get/:id", async (req, res) => {
       return res.json({ error: true, message: "failed to get user info" });
     } else {
       if (data) {
-        const { firstName, lastName, email, id, recipes, lists, mealPlans } =
-          data;
         return res.status(200).json({
           error: false,
           message: "user found",
-          user: {
-            firstName,
-            lastName,
-            email,
-            userId: id,
-            recipes,
-            lists,
-            mealPlans,
-          },
+          user: data,
         });
       } else {
         return res.status(200).json({ error: true, message: "user not found" });

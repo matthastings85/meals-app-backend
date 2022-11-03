@@ -4,7 +4,35 @@ const bcrypt = require("bcrypt");
 
 const { Schema } = mongoose;
 
-// User Schemas & Methods
+// Recipe Schemas  ----------------------------------------------------------
+
+const ingredientSchema = new Schema({
+  name: { type: String, required: true },
+  amount: Number,
+  unit: String,
+  id: Number,
+  image: String,
+});
+
+const Ingredient = mongoose.model("Ingredient", ingredientSchema);
+
+const recipeSchema = new Schema({
+  title: { type: String, required: true },
+  sourceName: String,
+  preparationMinutes: Number,
+  cookingMinutes: Number,
+  servings: Number,
+  extendedIngredients: [ingredientSchema],
+  analyzedInstructions: [],
+});
+
+const linkRecipeSchema = new Schema({
+  recipeName: { type: String, required: true },
+  recipeLink: { type: String, required: true },
+});
+
+const Recipe = mongoose.model("Recipe", recipeSchema);
+const LinkRecipe = mongoose.model("LinkRecipe", linkRecipeSchema);
 
 const favoriteRecipeSchema = new Schema({
   source: { type: String, required: true },
@@ -21,13 +49,16 @@ const mealPlanSchema = new Schema({
 
 const MealPlan = mongoose.model("MealPlan", mealPlanSchema);
 
+// User Schemas & Methods
+
 const userSchema = new Schema({
   firstName: { type: String, required: true },
   lastName: { type: String, required: true },
   email: { type: String, required: true },
   password: { type: String, required: true },
   marketing: { type: Boolean, required: true },
-  recipes: [favoriteRecipeSchema],
+  favorites: [favoriteRecipeSchema],
+  recipes: [recipeSchema],
   lists: [String],
   mealPlans: [String],
 });
@@ -64,6 +95,7 @@ const createAndSaveUser = async (userObj, done) => {
             lastName,
             email,
             id,
+            favorites,
             recipes,
             lists,
             mealPlans,
@@ -74,7 +106,8 @@ const createAndSaveUser = async (userObj, done) => {
             firstName,
             lastName,
             email,
-            id,
+            userId: id,
+            favorites,
             recipes,
             lists,
             mealPlans,
@@ -90,7 +123,28 @@ const findUserById = async (id, done) => {
   User.findById(id, (err, user) => {
     if (err) return done(err, null);
     // if (user) console.log("user exists: ", true);
-    done(null, user);
+    const {
+      firstName,
+      lastName,
+      email,
+      id,
+      favorites,
+      recipes,
+      lists,
+      mealPlans,
+      marketing,
+    } = user;
+    done(null, {
+      firstName,
+      lastName,
+      email,
+      id,
+      favorites,
+      recipes,
+      lists,
+      mealPlans,
+      marketing,
+    });
   });
 };
 
@@ -128,6 +182,7 @@ const authenticateUser = async (email, password, done) => {
         lastName,
         email,
         id,
+        favorites,
         recipes,
         lists,
         mealPlans,
@@ -138,7 +193,8 @@ const authenticateUser = async (email, password, done) => {
             firstName,
             lastName,
             email,
-            id,
+            userId: id,
+            favorites,
             recipes,
             lists,
             mealPlans,
@@ -161,34 +217,7 @@ const removeUserByEmail = (email, done) => {
 //   console.log("removed: ", data);
 // });
 
-// Recipe Schemas & Methods ----------------------------------------------------------
-
-const ingredientSchema = new Schema({
-  ingredientName: { type: String, required: true },
-  quantity: Number,
-  unit: String,
-});
-
-const Ingredient = mongoose.model("Ingredient", ingredientSchema);
-
-const recipeSchema = new Schema({
-  recipeDetails: {
-    recipeName: { type: String, required: true },
-    prepTime: Number,
-    cookTime: Number,
-    serves: Number,
-  },
-  ingredients: [ingredientSchema],
-  instructions: [String],
-});
-
-const linkRecipeSchema = new Schema({
-  recipeName: { type: String, required: true },
-  recipeLink: { type: String, required: true },
-});
-
-const Recipe = mongoose.model("Recipe", recipeSchema);
-const LinkRecipe = mongoose.model("LinkRecipe", linkRecipeSchema);
+// Recipe Methods ----------------------------------------------------------
 
 const createAndSaveRecipe = async ({ recipe, userId }, done) => {
   const newRecipe = new Recipe(recipe);
@@ -196,16 +225,41 @@ const createAndSaveRecipe = async ({ recipe, userId }, done) => {
     if (err) {
       done(err, null);
     } else {
-      // console.log("Recipe ID: ", data.id);
+      // console.log("Recipe ID: ", data);
 
       // Add Recipe to user
       const user = await User.findById(userId);
-      // console.log("found: ", user);
-      user.recipes.push(data.id);
+      console.log("found: ", user);
+      user.recipes.push(data);
 
       await user.save();
       // console.log("upadate: ", user);
-      done(null, data);
+
+      const {
+        firstName,
+        lastName,
+        email,
+        marketing,
+        recipes,
+        favorites,
+        lists,
+        mealPlans,
+        id,
+      } = user;
+      done(null, {
+        recipe: data,
+        user: {
+          firstName,
+          lastName,
+          email,
+          marketing,
+          userId: id,
+          favorites,
+          recipes,
+          lists,
+          mealPlans,
+        },
+      });
     }
   });
 };
@@ -215,7 +269,7 @@ const createAndSaveLinkRecipe = async ({ recipe, userId }, done) => {
     if (err) {
       done(err, null);
     } else {
-      // console.log("Recipe ID: ", data.id);
+      console.log("Recipe ID: ", data);
 
       // Add Recipe to user
       const user = await User.findById(userId);
@@ -241,13 +295,13 @@ const addFavoriteRecipe = async ({ recipe, source, userId }, done) => {
       // Add Recipe to user
       const user = await User.findById(userId);
       // console.log("found: ", user);
-      user.recipes.push(data);
+      user.favorites.push(data);
 
-      user.markModified("recipes");
+      user.markModified("favorites");
       await user.save();
       // console.log("updated: ", user);
-      const recipes = user.recipes;
-      done(null, { ...data, recipes });
+      const favorites = user.favorites;
+      done(null, { ...data, favorites });
     }
   });
 };
@@ -305,6 +359,7 @@ const createAndSaveList = async ({ list, userId, mealPlanId }, done) => {
         lastName,
         email,
         marketing,
+        favorites,
         recipes,
         lists,
         mealPlans,
@@ -319,6 +374,7 @@ const createAndSaveList = async ({ list, userId, mealPlanId }, done) => {
           email,
           marketing,
           userId: id,
+          favorites,
           recipes,
           lists,
           mealPlans,
@@ -372,6 +428,7 @@ const createAndSaveMealPlan = async ({ mealPlan, userId }, done) => {
         lastName,
         email,
         marketing,
+        favorites,
         recipes,
         lists,
         mealPlans,
@@ -385,6 +442,7 @@ const createAndSaveMealPlan = async ({ mealPlan, userId }, done) => {
           lastName,
           email,
           marketing,
+          favorites,
           recipes,
           lists,
           mealPlans,
@@ -423,30 +481,26 @@ const removeMealPlanById = async (mealPlanId, userId, done) => {
       return done(err, null);
     }
 
+    // Remove meal plan from user
+    const user = await User.findById(userId);
+    const index = user.mealPlans.findIndex((id) => id === mealPlanId);
+    user.mealPlans.splice(index);
+
     // Remove associated List
     List.findOneAndDelete({ mealPlanId: mealPlanId }, async (err, listData) => {
       if (err) {
         console.error(err);
       }
-      const deleteList = listData._id;
+      if (listData) {
+        const deleteList = listData._id;
 
-      // Remove meal plan from user
-      const user = await User.findById(userId);
-      console.log("mealplans: ", user.mealPlans);
-      const index = user.mealPlans.findIndex((id) => id === mealPlanId);
-      console.log("index: ", index);
-      console.log("mealPlan being deleted: ", user.mealPlans[index]);
-      user.mealPlans.splice(index);
-
-      // Remove list from user
-      console.log("lists: ", user.lists);
-      const listIndex = user.lists.findIndex((id) => id === deleteList);
-      console.log("list index: ", listIndex);
-      console.log("list being deleted: ", user.lists[listIndex]);
-      user.lists.splice(listIndex);
+        // Remove list from user
+        const listIndex = user.lists.findIndex((id) => id === deleteList);
+        user.lists.splice(listIndex);
+        user.markModified("lists");
+      }
 
       user.markModified("mealPlans");
-      user.markModified("lists");
       await user.save();
       console.log("updated user: ", user);
 
@@ -455,6 +509,7 @@ const removeMealPlanById = async (mealPlanId, userId, done) => {
         lastName,
         email,
         marketing,
+        favorites,
         recipes,
         lists,
         mealPlans,
@@ -468,6 +523,7 @@ const removeMealPlanById = async (mealPlanId, userId, done) => {
           lastName,
           email,
           marketing,
+          favorites,
           recipes,
           lists,
           mealPlans,
