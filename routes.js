@@ -16,6 +16,7 @@ const {
   findListById,
   updateList,
   removeMealPlanById,
+  removeFavoriteById,
 } = require("./database");
 
 // Authorization middleware. When used, the Access Token must
@@ -126,6 +127,28 @@ router.post("/favoriterecipe/post", async (req, res) => {
   });
 });
 
+// Remove Favorite Recipe
+router.delete(
+  "/favoriterecipe/delete/:favoriteId&:userId",
+  async (req, res) => {
+    const favoriteId = req.params.favoriteId;
+    const userId = req.params.userId;
+    console.log("param: ", req.params, favoriteId, userId);
+    await removeFavoriteById({ favoriteId, userId }, (err, data) => {
+      console.log(data);
+      if (err) {
+        return res.json({ error: true, message: "failed to remove favorite" });
+      } else {
+        return res.status(200).json({
+          error: false,
+          message: "favorite successfully removed",
+          data,
+        });
+      }
+    });
+  }
+);
+
 // New Meal Plan
 router.post("/newmealplan/post", async (req, res) => {
   const mealPlan = req.body.mealPlan;
@@ -173,7 +196,6 @@ router.get("/getmealplan/get/:id", async (req, res) => {
 });
 
 // Delete Meal Plan
-
 router.delete("/deletemealplan/delete/:id&:userId", async (req, res) => {
   console.log("param: ", req.params);
   const mealPlanId = req.params.id;

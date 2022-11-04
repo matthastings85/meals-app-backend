@@ -138,7 +138,7 @@ const findUserById = async (id, done) => {
       firstName,
       lastName,
       email,
-      id,
+      userId: id,
       favorites,
       recipes,
       lists,
@@ -303,6 +303,43 @@ const addFavoriteRecipe = async ({ recipe, source, userId }, done) => {
       const favorites = user.favorites;
       done(null, { ...data, favorites });
     }
+  });
+};
+
+const removeFavoriteById = async ({ favoriteId, userId }, done) => {
+  FavoriteRecipe.deleteOne({ _id: favoriteId }, async (err, data) => {
+    if (err) return console.error(err);
+    const user = await User.findById(userId);
+    const index = user.favorites.findIndex((item) => item._id === favoriteId);
+    user.favorites.splice(index);
+    user.markModified("mealPlans");
+    await user.save();
+    console.log("updated user: ", user);
+    const {
+      firstName,
+      lastName,
+      email,
+      marketing,
+      favorites,
+      recipes,
+      lists,
+      mealPlans,
+      id,
+    } = user;
+    done(null, {
+      data,
+      user: {
+        firstName,
+        lastName,
+        email,
+        marketing,
+        favorites,
+        recipes,
+        lists,
+        mealPlans,
+        userId: id,
+      },
+    });
   });
 };
 
@@ -585,3 +622,4 @@ exports.createAndSaveList = createAndSaveList;
 exports.findListById = findListById;
 exports.updateList = updateList;
 exports.removeMealPlanById = removeMealPlanById;
+exports.removeFavoriteById = removeFavoriteById;
