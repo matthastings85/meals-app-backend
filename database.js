@@ -217,6 +217,80 @@ const removeUserByEmail = (email, done) => {
 //   console.log("removed: ", data);
 // });
 
+const unsubscribeUserById = async (userId, done) => {
+  const user = await User.findById(userId);
+
+  if (!user) {
+    done({ message: "user not found" }, null);
+  } else {
+    user.marketing = false;
+    user.markModified("marketing");
+    await user.save();
+
+    console.log(user);
+    const {
+      firstName,
+      lastName,
+      email,
+      marketing,
+      recipes,
+      favorites,
+      lists,
+      mealPlans,
+      id,
+    } = user;
+
+    done(null, {
+      firstName,
+      lastName,
+      email,
+      marketing,
+      userId: id,
+      favorites,
+      recipes,
+      lists,
+      mealPlans,
+    });
+  }
+};
+
+const subscribeUserById = async (userId, done) => {
+  const user = await User.findById(userId);
+
+  if (!user) {
+    done({ message: "user not found" }, null);
+  } else {
+    user.marketing = true;
+    user.markModified("marketing");
+    await user.save();
+
+    console.log(user);
+    const {
+      firstName,
+      lastName,
+      email,
+      marketing,
+      recipes,
+      favorites,
+      lists,
+      mealPlans,
+      id,
+    } = user;
+
+    done(null, {
+      firstName,
+      lastName,
+      email,
+      marketing,
+      userId: id,
+      favorites,
+      recipes,
+      lists,
+      mealPlans,
+    });
+  }
+};
+
 // Recipe Methods ----------------------------------------------------------
 
 const createAndSaveRecipe = async ({ recipe, userId }, done) => {
@@ -309,12 +383,15 @@ const addFavoriteRecipe = async ({ recipe, source, userId }, done) => {
 const removeFavoriteById = async ({ favoriteId, userId }, done) => {
   FavoriteRecipe.deleteOne({ _id: favoriteId }, async (err, data) => {
     if (err) return console.error(err);
+
     const user = await User.findById(userId);
-    const index = user.favorites.findIndex((item) => item._id === favoriteId);
+    const index = user.favorites.findIndex((item) => item.id === favoriteId);
+
     user.favorites.splice(index);
     user.markModified("mealPlans");
     await user.save();
     console.log("updated user: ", user);
+
     const {
       firstName,
       lastName,
@@ -326,6 +403,7 @@ const removeFavoriteById = async ({ favoriteId, userId }, done) => {
       mealPlans,
       id,
     } = user;
+
     done(null, {
       data,
       user: {
@@ -623,3 +701,5 @@ exports.findListById = findListById;
 exports.updateList = updateList;
 exports.removeMealPlanById = removeMealPlanById;
 exports.removeFavoriteById = removeFavoriteById;
+exports.unsubscribeUserById = unsubscribeUserById;
+exports.subscribeUserById = subscribeUserById;

@@ -17,6 +17,8 @@ const {
   updateList,
   removeMealPlanById,
   removeFavoriteById,
+  unsubscribeUserById,
+  subscribeUserById,
 } = require("./database");
 
 // Authorization middleware. When used, the Access Token must
@@ -260,14 +262,30 @@ router.put("/updatelist/put", async (req, res) => {
   });
 });
 
-//Update by ID Method
-router.patch("/update/:id", (req, res) => {
-  res.send("Update by ID API");
+// Unsubscribe User from marketing
+router.put("/unsubscribe/put", async (req, res) => {
+  const userId = req.body.userId;
+
+  await unsubscribeUserById(userId, (err, data) => {
+    if (err) return res.status(400).json({ error: true, message: err.message });
+
+    res
+      .status(200)
+      .json({ error: false, message: "user succesfully unsubscribed", data });
+  });
 });
 
-//Delete by ID Method
-router.delete("/delete/:id", (req, res) => {
-  res.send("Delete by ID API");
+// Subscribe User to marketing
+router.put("/subscribe/put", async (req, res) => {
+  const userId = req.body.userId;
+
+  await subscribeUserById(userId, (err, data) => {
+    if (err) return res.status(400).json({ error: true, message: err.message });
+
+    res
+      .status(200)
+      .json({ error: false, message: "user succesfully unsubscribed", data });
+  });
 });
 
 module.exports = router;
