@@ -45,6 +45,7 @@ const mealPlanSchema = new Schema({
   startDate: { type: String, required: true },
   length: { type: Number, required: true },
   plan: { type: Array, required: true },
+  archived: Boolean,
 });
 
 const MealPlan = mongoose.model("MealPlan", mealPlanSchema);
@@ -581,6 +582,19 @@ const updateMealPlan = async ({ recipe, index, mealPlanId }, done) => {
   done(null, mealPlan);
 };
 
+const archiveMealPlan = async ({ mealPlanId }, done) => {
+  // console.log("mealplanid: ", mealPlanId);
+  const mealPlan = await MealPlan.findById(mealPlanId);
+  // console.log("found: ", mealPlan);
+  mealPlan.archived = true;
+
+  mealPlan.markModified("archived");
+  await mealPlan.save();
+  // console.log("Meal Plan Saved: ", mealPlan);
+
+  done(null, mealPlan);
+};
+
 const findMealPlanById = async (id, done) => {
   MealPlan.findById(id, (err, mealPlan) => {
     if (err) return done(err, null);
@@ -703,3 +717,4 @@ exports.removeMealPlanById = removeMealPlanById;
 exports.removeFavoriteById = removeFavoriteById;
 exports.unsubscribeUserById = unsubscribeUserById;
 exports.subscribeUserById = subscribeUserById;
+exports.archiveMealPlan = archiveMealPlan;

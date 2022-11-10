@@ -19,6 +19,7 @@ const {
   removeFavoriteById,
   unsubscribeUserById,
   subscribeUserById,
+  archiveMealPlan,
 } = require("./database");
 
 // Authorization middleware. When used, the Access Token must
@@ -181,6 +182,21 @@ router.put("/updatemealplan/put", async (req, res) => {
     res
       .status(200)
       .json({ error: false, message: "meal plan succesfully updated", data });
+  });
+});
+
+// Update Meal Plan
+router.put("/archivemealplan/put", async (req, res) => {
+  const mealPlanId = req.body.mealPlanId;
+
+  console.log("MEALPLANID: ", mealPlanId);
+
+  await archiveMealPlan({ mealPlanId }, (err, data) => {
+    if (err) return res.status(400).json({ error: true, message: err.message });
+
+    res
+      .status(200)
+      .json({ error: false, message: "meal plan succesfully archived", data });
   });
 });
 
