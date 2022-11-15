@@ -124,9 +124,11 @@ router.post("/favoriterecipe/post", async (req, res) => {
   await addFavoriteRecipe({ recipe, source, userId }, (err, data) => {
     if (err) return res.status(400).json({ error: true, message: err.message });
 
-    res
-      .status(200)
-      .json({ error: false, message: "recipe successfully saved", data });
+    res.status(200).json({
+      error: false,
+      message: "recipe successfully added to favorites",
+      data,
+    });
   });
 });
 
@@ -188,10 +190,11 @@ router.put("/updatemealplan/put", async (req, res) => {
 // Update Meal Plan
 router.put("/archivemealplan/put", async (req, res) => {
   const mealPlanId = req.body.mealPlanId;
+  const userId = req.body.userId;
 
-  console.log("MEALPLANID: ", mealPlanId);
+  console.log("MEALPLANID: ", mealPlanId, "USERID: ", userId);
 
-  await archiveMealPlan({ mealPlanId }, (err, data) => {
+  await archiveMealPlan({ mealPlanId, userId }, (err, data) => {
     if (err) return res.status(400).json({ error: true, message: err.message });
 
     res

@@ -45,7 +45,6 @@ const mealPlanSchema = new Schema({
   startDate: { type: String, required: true },
   length: { type: Number, required: true },
   plan: { type: Array, required: true },
-  archived: Boolean,
 });
 
 const MealPlan = mongoose.model("MealPlan", mealPlanSchema);
@@ -62,6 +61,7 @@ const userSchema = new Schema({
   recipes: [recipeSchema],
   lists: [String],
   mealPlans: [String],
+  archivedMealPlans: [String],
 });
 
 const User = mongoose.model("User", userSchema);
@@ -133,6 +133,8 @@ const findUserById = async (id, done) => {
       recipes,
       lists,
       mealPlans,
+      archivedMealPlans,
+
       marketing,
     } = user;
     done(null, {
@@ -144,6 +146,8 @@ const findUserById = async (id, done) => {
       recipes,
       lists,
       mealPlans,
+      archivedMealPlans,
+
       marketing,
     });
   });
@@ -238,6 +242,8 @@ const unsubscribeUserById = async (userId, done) => {
       favorites,
       lists,
       mealPlans,
+      archivedMealPlans,
+
       id,
     } = user;
 
@@ -251,6 +257,7 @@ const unsubscribeUserById = async (userId, done) => {
       recipes,
       lists,
       mealPlans,
+      archivedMealPlans,
     });
   }
 };
@@ -275,6 +282,8 @@ const subscribeUserById = async (userId, done) => {
       favorites,
       lists,
       mealPlans,
+      archivedMealPlans,
+
       id,
     } = user;
 
@@ -288,6 +297,7 @@ const subscribeUserById = async (userId, done) => {
       recipes,
       lists,
       mealPlans,
+      archivedMealPlans,
     });
   }
 };
@@ -319,6 +329,8 @@ const createAndSaveRecipe = async ({ recipe, userId }, done) => {
         favorites,
         lists,
         mealPlans,
+        archivedMealPlans,
+
         id,
       } = user;
       done(null, {
@@ -333,6 +345,7 @@ const createAndSaveRecipe = async ({ recipe, userId }, done) => {
           recipes,
           lists,
           mealPlans,
+          archivedMealPlans,
         },
       });
     }
@@ -388,8 +401,8 @@ const removeFavoriteById = async ({ favoriteId, userId }, done) => {
     const user = await User.findById(userId);
     const index = user.favorites.findIndex((item) => item.id === favoriteId);
 
-    user.favorites.splice(index);
-    user.markModified("mealPlans");
+    user.favorites.splice(index, 1);
+    user.markModified("favorites");
     await user.save();
     console.log("updated user: ", user);
 
@@ -402,6 +415,8 @@ const removeFavoriteById = async ({ favoriteId, userId }, done) => {
       recipes,
       lists,
       mealPlans,
+      archivedMealPlans,
+
       id,
     } = user;
 
@@ -416,6 +431,8 @@ const removeFavoriteById = async ({ favoriteId, userId }, done) => {
         recipes,
         lists,
         mealPlans,
+        archivedMealPlans,
+
         userId: id,
       },
     });
@@ -479,6 +496,8 @@ const createAndSaveList = async ({ list, userId, mealPlanId }, done) => {
         recipes,
         lists,
         mealPlans,
+        archivedMealPlans,
+
         id,
       } = user;
 
@@ -494,6 +513,7 @@ const createAndSaveList = async ({ list, userId, mealPlanId }, done) => {
           recipes,
           lists,
           mealPlans,
+          archivedMealPlans,
         },
       });
     }
@@ -548,6 +568,8 @@ const createAndSaveMealPlan = async ({ mealPlan, userId }, done) => {
         recipes,
         lists,
         mealPlans,
+        archivedMealPlans,
+
         id,
       } = user;
 
@@ -562,6 +584,8 @@ const createAndSaveMealPlan = async ({ mealPlan, userId }, done) => {
           recipes,
           lists,
           mealPlans,
+          archivedMealPlans,
+
           userId: id,
         },
       });
@@ -582,17 +606,23 @@ const updateMealPlan = async ({ recipe, index, mealPlanId }, done) => {
   done(null, mealPlan);
 };
 
-const archiveMealPlan = async ({ mealPlanId }, done) => {
-  // console.log("mealplanid: ", mealPlanId);
-  const mealPlan = await MealPlan.findById(mealPlanId);
-  // console.log("found: ", mealPlan);
-  mealPlan.archived = true;
+const archiveMealPlan = async ({ mealPlanId, userId }, done) => {
+  const user = await User.findById(userId);
 
-  mealPlan.markModified("archived");
-  await mealPlan.save();
-  // console.log("Meal Plan Saved: ", mealPlan);
+  const index = user.mealPlans.findIndex((id) => id === mealPlanId);
+  console.log(index);
 
-  done(null, mealPlan);
+  user.mealPlans.splice(index, 1);
+  user.markModified("mealPlans");
+
+  user.archivedMealPlans.push(mealPlanId);
+  user.markModified("archivedMealPlans");
+
+  await user.save();
+  done(null, {
+    mealPlans: user.mealPlans,
+    archivedMealPlans: user.archivedMealPlans,
+  });
 };
 
 const findMealPlanById = async (id, done) => {
@@ -613,7 +643,14 @@ const removeMealPlanById = async (mealPlanId, userId, done) => {
     // Remove meal plan from user
     const user = await User.findById(userId);
     const index = user.mealPlans.findIndex((id) => id === mealPlanId);
-    user.mealPlans.splice(index);
+    if (index !== -1) {
+      user.mealPlans.splice(index, 1);
+    } else {
+      const archivedIndex = user.archivedMealPlans.findIndex(
+        (id) => id === mealPlanId
+      );
+      user.archivedMealPlans.splice(archivedIndex, 1);
+    }
 
     // Remove associated List
     List.findOneAndDelete({ mealPlanId: mealPlanId }, async (err, listData) => {
@@ -625,11 +662,12 @@ const removeMealPlanById = async (mealPlanId, userId, done) => {
 
         // Remove list from user
         const listIndex = user.lists.findIndex((id) => id === deleteList);
-        user.lists.splice(listIndex);
+        user.lists.splice(listIndex, 1);
         user.markModified("lists");
       }
 
       user.markModified("mealPlans");
+      user.markModified("archivedMealPlans");
       await user.save();
       console.log("updated user: ", user);
 
@@ -642,6 +680,7 @@ const removeMealPlanById = async (mealPlanId, userId, done) => {
         recipes,
         lists,
         mealPlans,
+        archivedMealPlans,
         id,
       } = user;
 
@@ -656,6 +695,8 @@ const removeMealPlanById = async (mealPlanId, userId, done) => {
           recipes,
           lists,
           mealPlans,
+          archivedMealPlans,
+
           userId: id,
         },
       });
